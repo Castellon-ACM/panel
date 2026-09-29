@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mi bot">
+<meta name="theme-color" content="#F2F4F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1A23" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" id="touchIcon" href="">
+<title>Mi bot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F2F4F1; --surface:#FFFFFF; --ink:#15222E; --muted:#66727C; --line:#DDE2DD;
+  --up:#0F8B74; --up-soft:#DCEFEA; --down:#C9483E; --down-soft:#F6E1DE; --off:#B9C1C0;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#0F1A23; --surface:#172532; --ink:#E7ECEA; --muted:#8C99A3; --line:#26384A;
+        --up:#2FB597; --up-soft:#153A36; --down:#E56B61; --down-soft:#3A2126; --off:#3B4C5C;}
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font-family:"IBM Plex Sans",-apple-system,"Helvetica Neue",Arial,sans-serif;font-size:16px;line-height:1.45;
+     -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+main{max-width:480px;margin:0 auto;padding:12px 20px 32px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--up);outline-offset:2px}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0 20px}
+.top h1{font-size:17px;font-weight:600;margin:0}
+.chip{font-size:13px;font-weight:600;padding:3px 10px;border-radius:99px;background:var(--line);color:var(--ink)}
+.chip.real{background:var(--down-soft);color:var(--down)}
+.gear{background:none;border:0;padding:8px;margin:-8px;border-radius:10px;color:var(--muted)}
+
+.balance-label{color:var(--muted);font-size:14px;margin:0}
+.balance{font-size:44px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin:2px 0 14px}
+.pnl-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px}
+.pnl-row div{border-top:1px solid var(--line);padding-top:8px}
+.pnl-row span{display:block;font-size:13px;color:var(--muted)}
+.pnl-row strong{font-size:20px;font-weight:600}
+.pos{color:var(--up)} .neg{color:var(--down)}
+
+/* el interruptor: la pieza principal */
+.switch{width:100%;border:0;border-radius:28px;padding:10px;background:var(--off);position:relative;
+        height:96px;display:block;transition:background .35s ease;text-align:left}
+.switch .knob{position:absolute;top:10px;left:10px;width:76px;height:76px;border-radius:22px;background:var(--surface);
+        box-shadow:0 2px 6px rgba(0,0,0,.18);transition:transform .35s cubic-bezier(.3,1.3,.5,1);
+        display:grid;place-items:center}
+.switch .knob svg{width:30px;height:30px;stroke:var(--muted);transition:stroke .35s}
+.switch .txt{position:absolute;top:50%;transform:translateY(-50%);left:104px;right:20px;transition:left .35s,right .35s}
+.switch .txt b{display:block;font-size:22px;font-weight:700;color:var(--ink)}
+.switch .txt small{font-size:14px;color:var(--ink);opacity:.75}
+.switch.on{background:var(--up)}
+.switch.on .knob{transform:translateX(calc(100vw - 40px - 96px))}
+@media (min-width:480px){.switch.on .knob{transform:translateX(344px)}}
+.switch.on .knob svg{stroke:var(--up)}
+.switch.on .txt{left:20px;right:104px}
+.switch.on .txt b,.switch.on .txt small{color:#fff}
+.switch.busy{opacity:.7;pointer-events:none}
+.switch-note{font-size:13px;color:var(--muted);margin:10px 4px 32px}
+
+h2{font-size:15px;font-weight:600;margin:0 0 10px;color:var(--muted)}
+.trade{background:var(--surface);border-radius:18px;padding:16px;margin-bottom:10px;border:1px solid var(--line)}
+.trade-head{display:flex;justify-content:space-between;align-items:baseline}
+.trade-head b{font-size:19px}
+.trade-head .side{font-size:13px;font-weight:600;padding:2px 8px;border-radius:6px;margin-left:8px}
+.side.long{background:var(--up-soft);color:var(--up)} .side.short{background:var(--down-soft);color:var(--down)}
+.trade-pnl{font-size:22px;font-weight:600}
+.trade dl div{min-width:0}
+.trade dl{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin:14px 0 0}
+.trade dt{font-size:12px;color:var(--muted)} .trade dd{margin:0;font-size:14px;font-weight:500}
+#positions{margin-bottom:22px}
+.empty{color:var(--muted);padding:14px 0 18px;margin:0}
+
+.events{list-style:none;padding:0;margin:0 0 28px}
+.events li{padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+.events time{display:block;font-size:12px;color:var(--muted)}
+
+.foot{display:grid;gap:10px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:14px;font-weight:600;width:100%}
+.btn.danger{color:var(--down);border-color:var(--down-soft)}
+.updated{font-size:13px;color:var(--muted);text-align:center;margin:4px 0 0}
+.alert{background:var(--down-soft);color:var(--down);border-radius:14px;padding:12px 14px;font-size:14px;margin-bottom:18px}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translate(-50%,120px);
+       background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:14px;font-size:14px;max-width:90vw;
+       transition:transform .3s ease;z-index:9}
+.toast.show{transform:translate(-50%,0)}
+
+/* ajustes */
+.setup label{display:block;font-size:14px;font-weight:600;margin:16px 0 6px}
+.setup input{width:100%;font:inherit;padding:13px 14px;border-radius:12px;border:1px solid var(--line);
+             background:var(--surface);color:var(--ink)}
+.setup p{font-size:14px;color:var(--muted)}
+.setup .btn{margin-top:22px;background:var(--up);color:#fff;border:0}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <div style="display:flex;align-items:center;gap:10px"><h1>Mi bot</h1><span class="chip real" id="mode">Dinero real</span></div>
+    <button class="gear" id="gearBtn" aria-label="Ajustes">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+  </header>
+
+  <section id="dash" hidden>
+    <div class="alert" id="alert" hidden></div>
+    <p class="balance-label">Saldo en Kraken</p>
+    <p class="balance" id="equity">–</p>
+    <div class="pnl-row">
+      <div><span>Hoy</span><strong id="day">–</strong></div>
+      <div><span>Desde que empezó</span><strong id="total">–</strong></div>
+    </div>
+
+    <button class="switch" id="switch" role="switch" aria-checked="false">
+      <span class="knob"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg></span>
+      <span class="txt"><b id="swTitle">Bot apagado</b><small id="swSub">Toca para activarlo</small></span>
+    </button>
+    <p class="switch-note">Apagarlo solo evita operaciones nuevas. Las abiertas siguen protegidas por su stop en Kraken.</p>
+
+    <h2>Operación abierta</h2>
+    <div id="positions"></div>
+
+    <h2>Actividad</h2>
+    <ul class="events" id="events"></ul>
+
+    <div class="foot">
+      <button class="btn" id="refreshBtn">Actualizar ahora</button>
+      <button class="btn danger" id="closeBtn">Cerrar todas las operaciones</button>
+      <p class="updated" id="updated"></p>
+    </div>
+  </section>
+
+  <section class="setup" id="setup" hidden>
+    <h2 style="font-size:22px;color:var(--ink)">Conecta tu bot</h2>
+    <p>Estos datos se guardan solo en este iPhone. El token da acceso únicamente a tu repositorio del bot, nunca a Kraken.</p>
+    <label for="fOwner">Tu usuario de GitHub</label>
+    <input id="fOwner" autocapitalize="off" autocorrect="off" spellcheck="false" value="Castellon-ACM">
+    <label for="fRepo">Nombre del repositorio del bot</label>
+    <input id="fRepo" autocapitalize="off" autocorrect="off" spellcheck="false" value="kraken-bot">
+    <label for="fToken">Token de GitHub</label>
+    <input id="fToken" type="password" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="github_pat_…">
+    <button class="btn" id="saveBtn">Guardar y conectar</button>
+    <p id="setupMsg"></p>
+  </section>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+// icono de la pantalla de inicio, dibujado aquí mismo
+(() => { const c = document.createElement('canvas'); c.width = c.height = 180; const x = c.getContext('2d');
+  x.fillStyle = '#0F8B74'; x.fillRect(0, 0, 180, 180);
+  x.fillStyle = '#DCEFEA'; x.beginPath(); x.roundRect(29, 59, 122, 62, 31); x.fill();
+  x.fillStyle = '#15222E'; x.beginPath(); x.arc(120, 90, 24, 0, Math.PI * 2); x.fill();
+  $('touchIcon').href = c.toDataURL('image/png'); })();
+const store = {
+  get(){ try { return JSON.parse(localStorage.getItem('botcfg') || 'null'); } catch(e){ return null; } },
+  set(v){ try { localStorage.setItem('botcfg', JSON.stringify(v)); } catch(e){} }
+};
+let cfg = store.get(), status = null, pollUntil = 0;
+
+const money = n => (n == null || isNaN(n)) ? '–' :
+  new Intl.NumberFormat('es-ES',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(n);
+const signed = n => (n > 0 ? '+' : '') + money(n);
+const cls = (el, n) => { el.classList.toggle('pos', n > 0); el.classList.toggle('neg', n < 0); };
+const toast = msg => { const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 3800); };
+const ago = iso => { const m = Math.round((Date.now() - new Date(iso)) / 60000);
+  return m < 1 ? 'hace un momento' : m < 60 ? `hace ${m} min` : `hace ${Math.round(m/60)} h`; };
+const b64enc = s => btoa(unescape(encodeURIComponent(s)));
+const b64dec = s => decodeURIComponent(escape(atob(s.replace(/\n/g,''))));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function gh(path, opts = {}){
+  const r = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}${path}`, {
+    cache: 'no-store', ...opts,
+    headers: { 'Authorization': `Bearer ${cfg.token}`, 'Accept': 'application/vnd.github+json',
+               'X-GitHub-Api-Version': '2022-11-28', ...(opts.headers || {}) }
+  });
+  if (r.status === 401) throw new Error('El token no es válido o ha caducado.');
+  if (r.status === 404) throw new Error('No encuentro el repositorio o el archivo. Revisa usuario, nombre y permisos del token.');
+  if (!r.ok) throw new Error(`GitHub respondió ${r.status}.`);
+  return r.status === 204 ? null : r.json();
+}
+async function readFile(name){
+  const j = await gh(`/contents/${name}?ref=${cfg.branch}&t=${Date.now()}`);
+  return { data: JSON.parse(b64dec(j.content)), sha: j.sha };
+}
+async function writeControl(mutate, message){
+  const { data, sha } = await readFile('control.json');
+  const next = mutate(data);
+  await gh('/contents/control.json', { method: 'PUT', body: JSON.stringify({
+    message, sha, branch: cfg.branch, content: b64enc(JSON.stringify(next, null, 2) + '\n') }) });
+  return next;
+}
+const runBot = () => gh('/actions/workflows/bot.yml/dispatches',
+  { method: 'POST', body: JSON.stringify({ ref: cfg.branch }) });
+
+function renderSwitch(on){
+  const sw = $('switch');
+  sw.classList.toggle('on', on); sw.setAttribute('aria-checked', on);
+  $('swTitle').textContent = on ? 'Bot activo' : 'Bot apagado';
+  $('swSub').textContent = on ? (status && status.halted_today ? 'Parado hoy por pérdida máxima' : 'Buscando operaciones')
+                              : 'Toca para activarlo';
+}
+
+function render(){
+  const s = status || {};
+  const real = s.env !== 'demo';
+  $('mode').textContent = real ? 'Dinero real' : 'Demo'; $('mode').classList.toggle('real', real);
+  $('equity').textContent = money(s.equity);
+  $('day').textContent = s.day_pnl == null ? '–' : signed(s.day_pnl); cls($('day'), s.day_pnl);
+  $('total').textContent = s.total_pnl == null ? '–' : signed(s.total_pnl); cls($('total'), s.total_pnl);
+  renderSwitch(!!s.active);
+  const al = $('alert'); al.hidden = !s.error; al.textContent = s.error ? `El bot avisa: ${s.error}` : '';
+
+  const ps = s.positions || [];
+  $('positions').innerHTML = ps.length ? ps.map(p => `
+    <div class="trade">
+      <div class="trade-head">
+        <div><b>${esc(p.symbol)}</b><span class="side ${p.side}">${p.side === 'long' ? 'Compra' : 'Venta'}</span></div>
+        <span class="trade-pnl ${p.pnl > 0 ? 'pos' : p.pnl < 0 ? 'neg' : ''}">${signed(p.pnl)}</span>
+      </div>
+      <dl>
+        <div><dt>Entrada</dt><dd>${money(p.entry)}</dd></div>
+        <div><dt>Ahora</dt><dd>${money(p.mark)}</dd></div>
+        <div><dt>Stop</dt><dd>${p.sl ? money(p.sl) : '–'}</dd></div>
+        <div><dt>Objetivo</dt><dd>${p.tp ? money(p.tp) : '–'}</dd></div>
+      </dl>
+    </div>`).join('') : '<p class="empty">Ninguna ahora mismo.</p>';
+
+  const ev = s.events || [];
+  $('events').innerHTML = ev.length ? ev.slice(0, 8).map(e =>
+    `<li><time>${new Date(e.t).toLocaleString('es-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</time>${esc(e.msg)}</li>`).join('')
+    : '<li>Sin movimientos todavía.</li>';
+  $('updated').textContent = s.updated ? `Datos del bot ${ago(s.updated)}. Se actualiza solo cada 30 min.` : 'El bot aún no se ha ejecutado. Pulsa Actualizar ahora.';
+}
+
+async function load(){
+  try { status = (await readFile('status.json')).data; }
+  catch(e){
+    if (/No encuentro/.test(e.message)) {
+      try { const c = (await readFile('control.json')).data; status = { active: c.active, env: 'live' }; }
+      catch(e2){ toast(e2.message); }
+    } else { toast(e.message); }
+  }
+  render();
+}
+
+$('switch').onclick = async () => {
+  const sw = $('switch'), turnOn = !sw.classList.contains('on');
+  if (turnOn && !confirm('Vas a activar el bot con dinero real. ¿Seguro?')) return;
+  sw.classList.add('busy'); renderSwitch(turnOn);
+  try {
+    await writeControl(c => ({ ...c, active: turnOn }), turnOn ? 'Activar bot' : 'Apagar bot');
+    status = { ...(status || {}), active: turnOn };
+    try { await runBot(); } catch(e) {}
+    toast(turnOn ? 'Bot activado. Lo aplicará en 1-2 minutos.' : 'Bot apagado. No abrirá operaciones nuevas.');
+    pollUntil = Date.now() + 4 * 60000;
+  } catch(e){ renderSwitch(!turnOn); toast(e.message); }
+  sw.classList.remove('busy');
+};
+
+$('closeBtn').onclick = async () => {
+  if (!confirm('Se cerrarán todas las operaciones a precio de mercado y el bot se apagará. ¿Continuar?')) return;
+  try {
+    await writeControl(c => ({ ...c, active: false, close_all: Date.now() }), 'Cerrar todo');
+    await runBot();
+    status = { ...(status || {}), active: false }; render();
+    toast('Orden enviada. Se cerrarán en 1-2 minutos.');
+    pollUntil = Date.now() + 4 * 60000;
+  } catch(e){ toast(e.message); }
+};
+
+$('refreshBtn').onclick = async () => {
+  try { await runBot(); toast('Pidiendo datos nuevos al bot. Tardan 1-2 minutos.'); pollUntil = Date.now() + 4 * 60000; }
+  catch(e){ toast(e.message); }
+  load();
+};
+
+$('gearBtn').onclick = () => showSetup(true);
+$('saveBtn').onclick = async () => {
+  const owner = $('fOwner').value.trim(), repo = $('fRepo').value.trim(), token = $('fToken').value.trim() || (cfg && cfg.token);
+  if (!owner || !repo || !token) { $('setupMsg').textContent = 'Rellena los tres campos.'; return; }
+  $('setupMsg').textContent = 'Comprobando…';
+  try {
+    const r = await fetch(`https://api.github.com/repos/${owner}/${repo}`,
+      { headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' } });
+    if (!r.ok) throw new Error(r.status === 404 ? 'No encuentro ese repositorio con este token.' : `GitHub respondió ${r.status}.`);
+    const info = await r.json();
+    cfg = { owner, repo, token, branch: info.default_branch || 'main' }; store.set(cfg);
+    showSetup(false); load();
+  } catch(e){ $('setupMsg').textContent = e.message; }
+};
+
+function showSetup(on){
+  $('setup').hidden = !on; $('dash').hidden = on;
+  if (on && cfg){ $('fOwner').value = cfg.owner; $('fRepo').value = cfg.repo; $('fToken').placeholder = 'Déjalo vacío para mantener el actual'; }
+}
+
+showSetup(!cfg);
+if (cfg) load();
+setInterval(() => { if (cfg && !document.hidden) load(); }, 30000);
+setInterval(() => { if (Date.now() > pollUntil && status && status.updated) $('updated').textContent =
+  `Datos del bot ${ago(status.updated)}. Se actualiza solo cada 30 min.`; }, 60000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && cfg) load(); });
+</script>
+</body>
+</html>
