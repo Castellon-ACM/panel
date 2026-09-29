@@ -77,6 +77,16 @@ h2{font-size:15px;font-weight:600;margin:0 0 10px;color:var(--muted)}
 .trade dl{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin:14px 0 0}
 .trade dt{font-size:12px;color:var(--muted)} .trade dd{margin:0;font-size:14px;font-weight:500}
 #positions{margin-bottom:22px}
+.runs{list-style:none;padding:0;margin:0 0 10px}
+.run{padding:12px 0;border-bottom:1px solid var(--line)}
+.run-head{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--muted);margin-bottom:6px}
+.run-state{font-size:12px;font-weight:600;padding:1px 8px;border-radius:6px;background:var(--line);color:var(--muted)}
+.run-state.on{background:var(--up-soft);color:var(--up)}
+.run-item{font-size:14px;margin:4px 0}
+.run-item b{font-weight:600}
+.run-item .meta{color:var(--muted);font-size:13px}
+.run-item.act{color:var(--up)}
+.more{background:none;border:0;color:var(--up);font-weight:600;padding:8px 0 22px}
 .empty{color:var(--muted);padding:14px 0 18px;margin:0}
 
 .events{list-style:none;padding:0;margin:0 0 28px}
@@ -131,6 +141,10 @@ h2{font-size:15px;font-weight:600;margin:0 0 10px;color:var(--muted)}
     <h2>Operación abierta</h2>
     <div id="positions"></div>
 
+    <h2>Qué ha visto el bot</h2>
+    <ul class="runs" id="runs"></ul>
+    <button class="more" id="moreBtn" hidden>Ver más pasadas</button>
+
     <h2>Actividad</h2>
     <ul class="events" id="events"></ul>
 
@@ -168,7 +182,7 @@ const store = {
   get(){ try { return JSON.parse(localStorage.getItem('botcfg') || 'null'); } catch(e){ return null; } },
   set(v){ try { localStorage.setItem('botcfg', JSON.stringify(v)); } catch(e){} }
 };
-let cfg = store.get(), status = null, pollUntil = 0;
+let cfg = store.get(), status = null, pollUntil = 0, showAll = false;
 
 const money = n => (n == null || isNaN(n)) ? '–' :
   new Intl.NumberFormat('es-ES',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(n);
@@ -240,6 +254,19 @@ function render(){
       </dl>
     </div>`).join('') : '<p class="empty">Ninguna ahora mismo.</p>';
 
+  const runs = s.runs || [], shown = showAll ? runs : runs.slice(0, 6);
+  const hm = t => new Date(t).toLocaleString('es-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  $('runs').innerHTML = shown.length ? shown.map(r => `
+    <li class="run">
+      <div class="run-head"><time>${hm(r.t)}</time>
+        <span class="run-state ${r.trading ? 'on' : ''}">${r.trading ? 'Operando' : 'Sin operar'}</span></div>
+      ${(r.items || []).map(i => `
+        <div class="run-item ${i.action ? 'act' : ''}"><b>${esc(i.symbol)}</b>${i.price ? ` <span class="meta">${money(i.price)}, tendencia ${esc(i.trend)}</span>` : ''}
+          <div>${esc(i.decision)}</div></div>`).join('')}
+    </li>`).join('') : '<li class="run">Aún no hay pasadas registradas. Aparecerán tras la próxima ejecución.</li>';
+  $('moreBtn').hidden = runs.length <= 6;
+  $('moreBtn').textContent = showAll ? 'Ver menos' : `Ver más pasadas (${runs.length})`;
+
   const ev = s.events || [];
   $('events').innerHTML = ev.length ? ev.slice(0, 8).map(e =>
     `<li><time>${new Date(e.t).toLocaleString('es-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</time>${esc(e.msg)}</li>`).join('')
@@ -289,6 +316,7 @@ $('refreshBtn').onclick = async () => {
   load();
 };
 
+$('moreBtn').onclick = () => { showAll = !showAll; render(); };
 $('gearBtn').onclick = () => showSetup(true);
 $('saveBtn').onclick = async () => {
   const owner = $('fOwner').value.trim(), repo = $('fRepo').value.trim(), token = $('fToken').value.trim() || (cfg && cfg.token);
